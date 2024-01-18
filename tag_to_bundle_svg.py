@@ -146,24 +146,30 @@ class BundledTag:
 
         svg_text = ''
         desc = []
+        count = 0
+
+        center_x = (self.size * self.num_tile + self.tag_margin * (self.num_tile - 1)) / 2
+        center_y = (self.size * self.num_tile + self.tag_margin * (self.num_tile - 1)) / 2
         for _y in range(self.num_tile):
             for _x in range(self.num_tile):
                 tag_id = _y * self.num_tile + _x
+                actual_tag_id = count + start_tag_id
 
                 if tag_id % (self.stride + 1) == 0:
-                    tag_file = self.get_tag_filename(tag_id + start_tag_id)
+                    tag_file = self.get_tag_filename(actual_tag_id)
                     print(f'Generating tag: {tag_file}')
                     with Image.open(tag_file, 'r') as im:
                         width, height = im.size
                         pixel_array = im.load()
-                        pos_x = f'{_x * (self.size + self.tag_margin)}{self.unit}'
-                        pos_y = f'{_y * (self.size + self.tag_margin)}{self.unit}'
-
-                        svg_text += gen_apriltag_svg(width, height, pixel_array, self.svg_size, pos_x, pos_y)
+                        pos_x = _x * (self.size + self.tag_margin)
+                        pos_y = _y * (self.size + self.tag_margin)
                         desc.append(gen_apriltag_description(
-                            tag_id + start_tag_id, self.size, 
-                            _x * (self.size + self.tag_margin), _y * (self.size + self.tag_margin), 
+                            actual_tag_id, self.size, 
+                            pos_x - center_x, pos_y - center_y, 
                             self.unit))
+                        
+                        count += 1
+
         bundle_desc = {
             "name": f'{self.tag_prefix}{start_tag_id:05d}-{self.size}x{self.size}',
             "layout": desc
