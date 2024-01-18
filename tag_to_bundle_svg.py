@@ -19,15 +19,15 @@ def dir_path(file_path):
 parser = argparse.ArgumentParser()
 parser = argparse.ArgumentParser(
     description='A script to convert pre-generated apriltag .png files into SVG format.',
-    epilog='Example: "python3 tag_to_bundle_svg.py --tag_folder=tagStandard41h12 --tag_prefix=tag41_12_ --out_folder=outputs --num_bundles=20 --size=90mm --num_tile=2 --stride=0"'
+    epilog='Example: "python3 tag_to_bundle_svg.py --tag_folder=tagStandard41h12 --out_folder=outputs --num_bundles=20 --size=90mm --num_tile=2 --stride=0"'
 )
 parser.add_argument(
     '--tag_folder', type=dir_path, dest="tag_folder",
     help='The path to the folder containing apriltag png you want to convert.'
 )
 parser.add_argument(
-    '--tag_prefix', type=str, dest="tag_prefix",
-    help='The tag filename prefix.'
+    '--tag_prefix', type=str, required=False, default='default', dest="tag_prefix",
+    help='The tag filename prefix. If not specified, the script will try to parse it from the file in the tag_folder.'
 )
 parser.add_argument(
     '--out_folder', type=dir_path, dest="out_folder",
@@ -66,7 +66,23 @@ class BundledTag:
     def __init__(self, args) -> None:
         self.tag_folder = args.tag_folder
         self.out_folder = args.out_folder
+
+        sample_fname = None
         self.tag_prefix = args.tag_prefix
+
+        # Find a sample tag file in the tag_folder
+        for fname in os.listdir(self.tag_folder):
+            if re.search(r'[0-9]+.png$', fname) is not None:
+                sample_fname = fname
+
+                # If tag_prefix is not specified, try to parse it from the file in the tag_folder
+                if self.tag_prefix == "default":
+                    self.tag_prefix = re.split(r'[0-9]+.png$', fname)[0]
+                    print(f'Tag prefix not specified. Automatically parsed tag prefix: {self.tag_prefix}')
+                break    
+
+        assert self.tag_prefix != "default", 'Error: Cannot find any tag file in the tag folder.'
+        
 
         self.svg_size = args.svg_size   # size with unit
         self.num_tile = args.num_tile   # integer
@@ -78,6 +94,11 @@ class BundledTag:
         assert self.unit in ['mm', 'in', 'px'], 'Error: Invalid unit. Supported units are "mm", "in", "px".'
         print(f'Generating bundled tags with size: {self.size}{self.unit}')
         
+        # Calculate tag margin size in svg_size unit
+        with Image.open(os.path.join(self.tag_folder, sample_fname), 'r') as im:
+            width, height = im.size
+            # Here I assume the tag is square
+            self.tag_margin = args.tag_margin * self.size / width
 
         self.individual = args.individual
 
