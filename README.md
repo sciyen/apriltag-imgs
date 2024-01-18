@@ -32,7 +32,7 @@ The following command generate a 11 by 11 grid of tags. With the `individual_pri
 python3 tag_to_bundle_svg.py --tag_folder=tagStandard41h12  --out_folder=outputs --num_bundles=1 --size=180mm --num_tile=11 --stride=1 --margin=1 --individual_print=true
 ```
 
-After obtaining the svg files, you can use [inkscape](https://inkscape.org/) to convert them into pdf. Put all svg files in a folder and create a batch file (e.g. `convert.bat`) with the following content:
+After obtaining the svg files, you can use [inkscape](https://inkscape.org/) to convert them into pdf. Using the solution from [Johannski](https://alpha.inkscape.org/vectors/www.inkscapeforum.com/viewtopic7a7e.html?t=16743#), put all svg files in a folder and create a batch file (e.g. `convert.bat`) with the following content:
 ```bat
 @Echo off
 
