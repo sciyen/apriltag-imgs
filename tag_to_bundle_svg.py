@@ -124,9 +124,18 @@ class BundledTag:
                 (_r, _g, _b, _raw_a) = rbga
                 _a = _raw_a / 255
                 return f'rgba({_r}, {_g}, {_b}, {_a})'
+            
+            def gen_color_hex(rbga):
+                # Inkscape cannot handle rgba color, so we convert it to hex color
+                (_r, _g, _b, _raw_a) = rbga
+                if _r == 0 and _g == 0 and _b == 0:
+                    return '#000000'
+                else:
+                    return '#ffffff'
 
             def gen_gridsquare(row_num, col_num, pixel):
-                _rgba = gen_rgba(pixel)
+                # _rgba = gen_rgba(pixel)
+                _rgba = gen_color_hex(pixel)
                 _id = f'box{row_num}-{col_num}'
                 return f'\t<rect width="1" height="1" x="{row_num}" y="{col_num}" fill="{_rgba}" id="{_id}"/>\n'
             
