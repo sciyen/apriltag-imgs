@@ -6,6 +6,7 @@ import sys
 import argparse
 import math
 import json
+import yaml
 from PIL import Image
 
 # Thanks to https://stackoverflow.com/a/54547257
@@ -251,10 +252,12 @@ def main():
     args = parser.parse_args()
     bundled_tag = BundledTag(args)
 
-    # TODO: maximum number check
+    # TODO: maximum num_bundle check
     desc = bundled_tag.gen_batch_bundles(args.start_index, args.num_bundles)
     with open(os.path.join(args.out_folder, 'bundle_description.json'), 'w') as fp:
         json.dump(desc, fp, indent=4)
+    # with open(os.path.join(args.out_folder, 'bundle_description.yaml'), 'w') as fp:
+    #     yaml.dump(desc, fp, default_flow_style=False, allow_unicode=True, indent=4)
 
 if __name__ == "__main__":
     main()
