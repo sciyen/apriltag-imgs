@@ -54,8 +54,12 @@ parser.add_argument(
     help='The number of blank tags between each tag in a bundle. For example, a stride of 1 will generate a 3x3 grid of tags with 1 blank tag between each tag.'
 )
 parser.add_argument(
-    '--margin', type=str, required=False, default='0mm', dest="tag_margin", 
-    help='The size of the white margin around the apriltag (mm)'
+    '--margin', type=int, required=False, default='1', dest="tag_margin", 
+    help='Number of bits of white margin around each tag.'
+)
+parser.add_argument(
+    '--individual_print', type=str, required=False, default='false', dest="individual", 
+    help='Whether the marker in the bundled tag is exported individually.'
 )
 
 class BundledTag:
@@ -74,11 +78,8 @@ class BundledTag:
         assert self.unit in ['mm', 'in', 'px'], 'Error: Invalid unit. Supported units are "mm", "in", "px".'
         print(f'Generating bundled tags with size: {self.size}{self.unit}')
         
-        # Parsing tag margin
-        tag_margin = args.tag_margin
-        margin_unit = re.search(r'[a-zA-Z]+', tag_margin).group(0)
-        assert margin_unit == self.unit, 'Error: Invalid margin unit. The margin unit must be the same as the svg size unit.'
-        self.tag_margin = int(re.search(r'[0-9]+', tag_margin).group(0))
+
+        self.individual = args.individual
 
     def get_tag_filename(self, tag_id):
         return os.path.join(self.tag_folder, f'{self.tag_prefix}{tag_id:05d}.png')
@@ -163,42 +164,57 @@ class BundledTag:
                         pixel_array = im.load()
                         pos_x = _x * (self.size + self.tag_margin)
                         pos_y = _y * (self.size + self.tag_margin)
+
+                        if self.individual == 'true':
+                            svg_text = ''
+                            svg_text += gen_apriltag_svg(width, height, pixel_array, self.svg_size, 
+                                                         f'{0}{self.unit}', f'{0}{self.unit}')
+                        else:
+                            svg_text += gen_apriltag_svg(width, height, pixel_array, self.svg_size, 
+                                                         f'{pos_x}{self.unit}', f'{pos_y}{self.unit}')
+                            
                         desc.append(gen_apriltag_description(
                             actual_tag_id, self.size, 
                             pos_x - center_x, pos_y - center_y, 
                             self.unit))
+                    
+                        if self.individual == 'true':
+                            svg = self.svg_wrapper(svg_text, self.svg_size, self.svg_size)
+                            self.svg_save(svg, os.path.join(self.out_folder, f'{self.tag_prefix}{actual_tag_id:05d}_{_x}-{_y}.svg'))
                         
                         count += 1
 
         bundle_desc = {
-            "name": f'{self.tag_prefix}{start_tag_id:05d}-{self.size}x{self.size}',
+            "name": f'{self.tag_prefix}bundle_{start_tag_id:05d}-{self.num_tile}x{self.num_tile}',
             "layout": desc
-        }                        
-        return svg_text, bundle_desc
+        }
 
-    def gen_bundled_apriltag_svg(self, start_tag_id):
-        """
-        Wrapper for svg bundle generation.
-        """
         margin_size = self.tag_margin * (self.num_tile - 1)
         bundle_size = f'{self.size * self.num_tile + margin_size}{self.unit}'
-        svg_text = '<?xml version="1.0" standalone="yes"?>\n'
-        svg_text += f'<svg width="{bundle_size}" height="{bundle_size}" viewBox="0,0,{bundle_size},{bundle_size}" xmlns="http://www.w3.org/2000/svg">\n'
-        svg, desc = self.gen_bundled_tag(start_tag_id)
-        svg_text += svg
+        svg_text = self.svg_wrapper(svg_text, bundle_size, bundle_size)
+        return svg_text, bundle_desc
+
+    def svg_wrapper(self, content, width, height):
+        # svg_text = '<?xml version="1.0" standalone="yes"?>\n'
+        svg_text = ''
+        svg_text += f'<svg width="{width}" height="{height}" viewBox="0,0,{width},{height}" xmlns="http://www.w3.org/2000/svg">\n'
+        svg_text += content
         svg_text += '</svg>\n'
-        return svg_text, desc
+        return svg_text
+    
+    def svg_save(self, svg_text, filename):
+        with open(filename, 'w') as fp:
+            fp.write(svg_text)
+        print(f'Output SVG file: {filename}.')
     
     def gen_batch_bundles(self, start_tag_id, num_bundle):
         bundle_desc = []
         for i in range(num_bundle):
             tag_in_bundle = self.num_tile * self.num_tile - self.stride * math.floor(self.num_tile * self.num_tile / (self.stride + 1))
-            svg, desc = self.gen_bundled_apriltag_svg(start_tag_id + i * tag_in_bundle)
+            svg, desc = self.gen_bundled_tag(start_tag_id + i * tag_in_bundle)
             bundle_desc.append(desc)
-            out_file = os.path.join(self.out_folder, f'{desc["name"]}.svg')
-            with open(out_file, 'w') as fp:
-                fp.write(svg)
-            print(f'Output SVG file: {out_file} with size: {self.svg_size}')
+            if self.individual != 'true':
+                self.svg_save(svg, os.path.join(self.out_folder, f'{desc["name"]}.svg'))
         return bundle_desc
 
 def main():
